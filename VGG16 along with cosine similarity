@@ -1,0 +1,256 @@
+{
+  "nbformat": 4,
+  "nbformat_minor": 0,
+  "metadata": {
+    "colab": {
+      "provenance": [],
+      "authorship_tag": "ABX9TyNUnqHG6dd1iM3G9Ugu58tF",
+      "include_colab_link": true
+    },
+    "kernelspec": {
+      "name": "python3",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python"
+    }
+  },
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "metadata": {
+        "id": "view-in-github",
+        "colab_type": "text"
+      },
+      "source": [
+        "<a href=\"https://colab.research.google.com/github/tenoob/Image_similarity_search/blob/main/VGG16%20along%20with%20cosine%20similarity\" target=\"_parent\"><img src=\"https://colab.research.google.com/assets/colab-badge.svg\" alt=\"Open In Colab\"/></a>"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "execution_count": 2,
+      "metadata": {
+        "id": "3tGz7Rnea_ab"
+      },
+      "outputs": [],
+      "source": [
+        "import numpy as np\n",
+        "\n",
+        "from tensorflow.keras.applications.vgg16 import vgg16\n",
+        "from tensorflow.keras.applications.vgg16 import preprocess_input\n",
+        "from tensorflow.keras.preprocessing import image"
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#vgg16 feature extractor\n",
+        "\n",
+        "class VGGNet:\n",
+        "  def __init__(self):\n",
+        "    self.input_shape = (224, 224, 3)\n",
+        "    self.weights = 'imagenet'\n",
+        "    self.pooling = 'max'\n",
+        "    self.model = VGG16(\n",
+        "        include_top=False,\n",
+        "        input_shape=(self.input_shape[0],self.input_shape[1],self.input_shape[2]),\n",
+        "        weights=self.weights,\n",
+        "        pooling=self.pooling,\n",
+        "    )\n",
+        "    self.model.predict(np.zeros((1,224,224,3)))\n",
+        "\n",
+        "  def feature_extractor(self,img_path):\n",
+        "    img = image.load_img(img_path, target_size=(self.input_shape[0], self.input_shape[1]))\n",
+        "    img_array = image.img_to_array(img)\n",
+        "    expanded_img_array = np.expand_dims(img_array, axis=0)\n",
+        "    features = self.model.predict(expanded_img_array)\n",
+        "    flattened_features = features.flatten()\n",
+        "    normalized_features = flattened_features / np.linalg.norm(flattened_features)\n",
+        "    return normalized_features\n",
+        "\n",
+        "\n"
+      ],
+      "metadata": {
+        "id": "C0nmS5obf9DY"
+      },
+      "execution_count": 15,
+      "outputs": []
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#apply cosine similarity\n",
+        "\n",
+        "import os\n",
+        "import h5py\n",
+        "\n",
+        "img_path = \"/content/img_database\"\n",
+        "\n",
+        "features = []\n",
+        "names = []\n",
+        "\n",
+        "model = VGGNet()\n",
+        "\n",
+        "for img in os.listdir(img_path):\n",
+        "  print(f\"Extracting feaures from {img}\")\n",
+        "  feature  = model.feature_extractor(img_path + \"/\" + img)\n",
+        "  features.append(feature)\n",
+        "  names.append(img)\n",
+        "\n",
+        "features = np.array(features)\n",
+        "print(features)\n",
+        "\n",
+        "output = \"extracted_features.hdf5\"\n",
+        "h5f = h5py.File(output, 'w')\n",
+        "h5f.create_dataset('dataset_1', data=features)\n",
+        "h5f.create_dataset('dataset_2', data = np.bytes_(names))\n",
+        "h5f.close()"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "cOGqOlD1lQY3",
+        "outputId": "c4120cd8-db67-45bd-8de3-180de519a63a"
+      },
+      "execution_count": 16,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 721ms/step\n",
+            "Extracting feaures from c17_4.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 964ms/step\n",
+            "Extracting feaures from c130_1.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 965ms/step\n",
+            "Extracting feaures from c130_3.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 554ms/step\n",
+            "Extracting feaures from il76_2.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 557ms/step\n",
+            "Extracting feaures from c130_2.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 586ms/step\n",
+            "Extracting feaures from c17_3.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 550ms/step\n",
+            "Extracting feaures from il76_4.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 547ms/step\n",
+            "Extracting feaures from c17_2.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 569ms/step\n",
+            "Extracting feaures from c17_1.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 561ms/step\n",
+            "Extracting feaures from c17_5.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 557ms/step\n",
+            "Extracting feaures from il76_1.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 567ms/step\n",
+            "Extracting feaures from il76_3.jpg\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 559ms/step\n",
+            "[[0.12441798 0.         0.00394914 ... 0.0098747  0.01793106 0.0808627 ]\n",
+            " [0.01961849 0.06078031 0.01534772 ... 0.02192587 0.01752041 0.01289688]\n",
+            " [0.         0.05849945 0.         ... 0.0771819  0.06939995 0.07595356]\n",
+            " ...\n",
+            " [0.00751361 0.00808146 0.         ... 0.05385457 0.02782134 0.        ]\n",
+            " [0.04730501 0.         0.0225178  ... 0.05403259 0.02979012 0.00406065]\n",
+            " [0.14800839 0.         0.03138347 ... 0.         0.06861684 0.        ]]\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from scipy import spatial\n",
+        "\n",
+        "h5file = h5py.File(\"extracted_features.hdf5\",'r')\n",
+        "features = h5file['dataset_1'][:]\n",
+        "img_names = h5file['dataset_2'][:]\n",
+        "h5f.close()\n",
+        "\n",
+        "\n",
+        "search_img = '/content/Screenshot 2025-05-10 004227.jpg'\n",
+        "\n",
+        "model = VGGNet()\n",
+        "\n",
+        "query = model.feature_extractor(search_img)\n",
+        "\n",
+        "similarity = []\n",
+        "for i in range(features.shape[0]):\n",
+        "  score = 1 - spatial.distance.cosine(query, features[i])\n",
+        "  similarity.append(score)\n",
+        "\n",
+        "print(f\"similarity: {similarity}\")\n",
+        "\n",
+        "scores = np.array(similarity)\n",
+        "rankings = np.argsort(scores)[::-1]\n",
+        "print(f\"\\nrankings: {rankings}\")\n",
+        "\n",
+        "ranking_score = scores[rankings]\n",
+        "print(f\"\\nranking_score: {ranking_score}\")\n",
+        "\n",
+        "print(f\"\\nrankings of each img\")\n",
+        "for i in range(rankings.shape[0]):\n",
+        "  print(f\"{ranking_score[i]} : {img_names[rankings[i]]}\")\n",
+        "\n",
+        "n = 3\n",
+        "n_top = rankings[:n]\n",
+        "top_score = ranking_score[:n]\n",
+        "\n",
+        "print(f\"\\n\\ntop {n} matches with similarit scores:\")\n",
+        "for i, (img_id,score) in enumerate(zip(n_top,top_score)):\n",
+        "  print(f\"{i+1}. {img_names[img_id]} : {score}\")"
+      ],
+      "metadata": {
+        "colab": {
+          "base_uri": "https://localhost:8080/"
+        },
+        "id": "3zX9cAZYr2X9",
+        "outputId": "06ebdeed-e19d-4b27-9bf6-4711a0d05ecc"
+      },
+      "execution_count": 20,
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": [
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 719ms/step\n",
+            "\u001b[1m1/1\u001b[0m \u001b[32m━━━━━━━━━━━━━━━━━━━━\u001b[0m\u001b[37m\u001b[0m \u001b[1m1s\u001b[0m 552ms/step\n",
+            "similarity: [np.float32(0.6960984), np.float32(0.8766243), np.float32(0.67997545), np.float32(0.57146907), np.float32(0.8353428), np.float32(0.7014792), np.float32(0.6435858), np.float32(0.6182099), np.float32(0.63752055), np.float32(0.7146853), np.float32(0.6512329), np.float32(0.60566354)]\n",
+            "\n",
+            "rankings: [ 1  4  9  5  0  2 10  6  8  7 11  3]\n",
+            "\n",
+            "ranking_score: [0.8766243  0.8353428  0.7146853  0.7014792  0.6960984  0.67997545\n",
+            " 0.6512329  0.6435858  0.63752055 0.6182099  0.60566354 0.57146907]\n",
+            "\n",
+            "rankings of each img\n",
+            "0.8766242861747742 : b'c130_1.jpg'\n",
+            "0.8353428244590759 : b'c130_2.jpg'\n",
+            "0.714685320854187 : b'c17_5.jpg'\n",
+            "0.7014791965484619 : b'c17_3.jpg'\n",
+            "0.6960983872413635 : b'c17_4.jpg'\n",
+            "0.6799754500389099 : b'c130_3.jpg'\n",
+            "0.651232898235321 : b'il76_1.jpg'\n",
+            "0.6435858011245728 : b'il76_4.jpg'\n",
+            "0.6375205516815186 : b'c17_1.jpg'\n",
+            "0.6182098984718323 : b'c17_2.jpg'\n",
+            "0.605663537979126 : b'il76_3.jpg'\n",
+            "0.5714690685272217 : b'il76_2.jpg'\n",
+            "\n",
+            "\n",
+            "top 3 matches with similarit scores:\n",
+            "1. b'c130_1.jpg' : 0.8766242861747742\n",
+            "2. b'c130_2.jpg' : 0.8353428244590759\n",
+            "3. b'c17_5.jpg' : 0.714685320854187\n"
+          ]
+        }
+      ]
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "metadata": {
+        "id": "HTp5RiaKvdd1"
+      },
+      "execution_count": null,
+      "outputs": []
+    }
+  ]
+}
